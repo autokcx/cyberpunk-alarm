@@ -180,14 +180,70 @@
     .sign { text-align: center; margin-top: 9px; font-size: 9.5px; letter-spacing: 2px; color: var(--mute); text-transform: uppercase; }
 
     /* ── 爆炸 & 胜利横幅 ── */
-    body.boom .stage { animation: quake 0.5s; }
-    @keyframes quake { 0%,100%{transform:translate(0,0)} 20%{transform:translate(-6px,3px)} 40%{transform:translate(6px,-3px)} 60%{transform:translate(-4px,-2px)} 80%{transform:translate(4px,2px)} }
-    .flash {
-      position: fixed; inset: 0; z-index: 40; pointer-events: none; opacity: 0;
-      background: radial-gradient(circle, #fff, #ffb020 38%, transparent 72%);
+    body.boom .stage { animation: quake 0.6s cubic-bezier(.36,.07,.19,.97); }
+    @keyframes quake {
+      0%,100%{transform:translate(0,0)}
+      10%{transform:translate(-11px,6px)}  25%{transform:translate(10px,-7px)}
+      40%{transform:translate(-8px,-5px)}  55%{transform:translate(7px,6px)}
+      70%{transform:translate(-5px,3px)}   85%{transform:translate(4px,-2px)}
     }
-    .flash.go { animation: flash 0.6s ease-out; }
-    @keyframes flash { 0%{opacity:0.95; transform:scale(0.4)} 100%{opacity:0; transform:scale(1.6)} }
+
+    /* ── C4 起爆：白光 + 火球 + 冲击波 + 火星（CSGO 风） ── */
+    .flash { position: fixed; inset: 0; z-index: 40; pointer-events: none;
+             display: flex; align-items: center; justify-content: center; opacity: 0; }
+    .flash.go { opacity: 1; }
+    .flash > * { position: absolute; will-change: transform, opacity; }
+
+    .flash .whiteout { inset: 0; background: #fff; opacity: 0; }
+    .flash.go .whiteout { animation: exWhite 0.5s ease-out forwards; }
+    @keyframes exWhite { 0%{opacity:0} 6%{opacity:0.92} 30%{opacity:0.14} 100%{opacity:0} }
+
+    .flash .fireball {
+      width: 240px; height: 240px; border-radius: 50%; filter: blur(1.5px);
+      opacity: 0; transform: scale(0.2); mix-blend-mode: screen;
+      background: radial-gradient(circle,
+        #ffffff 0%, #fff2b0 8%, #ffd21a 18%, #ff9500 33%, #ff5a10 47%,
+        #d4300f 60%, #6e1500 72%, transparent 80%);
+    }
+    .flash.go .fireball { animation: exFire 0.8s cubic-bezier(0.15,0.6,0.3,1) forwards; }
+    @keyframes exFire {
+      0%{opacity:0; transform:scale(0.2)} 10%{opacity:1; transform:scale(0.8)}
+      45%{opacity:1; transform:scale(1.12)} 100%{opacity:0; transform:scale(1.5)}
+    }
+    /* 超亮内核（起爆瞬间的白热） */
+    .flash .core {
+      width: 150px; height: 150px; border-radius: 50%; opacity: 0; transform: scale(0.3);
+      mix-blend-mode: screen;
+      background: radial-gradient(circle, #fff 0%, #fff6d0 32%, #ffcf4a 56%, transparent 74%);
+    }
+    .flash.go .core { animation: exCore 0.5s ease-out forwards; }
+    @keyframes exCore { 0%{opacity:0; transform:scale(0.3)} 12%{opacity:1; transform:scale(1)}
+                        100%{opacity:0; transform:scale(1.4)} }
+
+    .flash .shock {
+      width: 60px; height: 60px; border-radius: 50%; opacity: 0; transform: scale(0.3);
+      border: 7px solid rgba(255,222,150,0.9);
+      box-shadow: 0 0 26px rgba(255,180,80,0.75), inset 0 0 26px rgba(255,180,80,0.5);
+    }
+    .flash.go .shock { animation: exShock 0.7s ease-out forwards; }
+    @keyframes exShock { 0%{opacity:0.9; transform:scale(0.3); border-width:9px}
+                         100%{opacity:0; transform:scale(3.6); border-width:1px} }
+
+    .flash .sparks {
+      width: 340px; height: 340px; opacity: 0;
+      background:
+        radial-gradient(3px 3px at 20% 30%, #ffd07a, transparent),
+        radial-gradient(2px 2px at 80% 25%, #ffb020, transparent),
+        radial-gradient(3px 3px at 65% 72%, #ff7a18, transparent),
+        radial-gradient(2px 2px at 30% 78%, #ffe36b, transparent),
+        radial-gradient(3px 3px at 50% 14%, #fff, transparent),
+        radial-gradient(2px 2px at 14% 55%, #ff6a12, transparent),
+        radial-gradient(3px 3px at 88% 62%, #ffd07a, transparent),
+        radial-gradient(2px 2px at 72% 45%, #fff2c0, transparent);
+    }
+    .flash.go .sparks { animation: exSpark 0.85s ease-out forwards; }
+    @keyframes exSpark { 0%{opacity:0; transform:scale(0.3)} 15%{opacity:1}
+                         100%{opacity:0; transform:scale(2.3)} }
     .banner {
       position: fixed; inset: 0; z-index: 41; display: flex; align-items: center; justify-content: center;
       pointer-events: none; opacity: 0;
@@ -283,7 +339,13 @@
 
   <div class="sign">Kevin's 1st Vibe Coding App</div>
 
-  <div class="flash" id="flash"></div>
+  <div class="flash" id="flash">
+    <div class="whiteout"></div>
+    <div class="fireball"></div>
+    <div class="core"></div>
+    <div class="sparks"></div>
+    <div class="shock"></div>
+  </div>
   <div class="banner" id="banner"><div class="txt" id="bannerTxt"></div></div>
 
   <script>
@@ -452,16 +514,59 @@
       const flash = document.getElementById('flash');
       flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
       document.body.classList.add('boom');
-      setTimeout(() => document.body.classList.remove('boom'), 520);
+      setTimeout(() => document.body.classList.remove('boom'), 620);
+      boomSound();
+    }
+    // 起爆音（多层合成，仿 CSGO C4）：起爆脆响 → 低频重击 → 爆轰轰鸣 → 长尾隆隆
+    function noiseBuffer(c, dur, shape) {
+      const len = Math.floor(c.sampleRate * dur);
+      const buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, shape);
+      return buf;
+    }
+    function boomGrit() {
+      const n = 1024, curve = new Float32Array(n);
+      for (let i = 0; i < n; i++) { const x = (i / n) * 2 - 1; curve[i] = Math.tanh(x * 2.4); }
+      return curve;
+    }
+    function boomSound() {
       try {
-        const c = ac(), t = c.currentTime, len = Math.floor(c.sampleRate * 0.75);
-        const buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
-        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
-        const src = c.createBufferSource(); src.buffer = buf;
-        const lp = c.createBiquadFilter(); lp.type = 'lowpass';
-        lp.frequency.setValueAtTime(900, t); lp.frequency.exponentialRampToValueAtTime(60, t + 0.6);
-        const g = c.createGain(); g.gain.setValueAtTime(1.0, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.75);
-        src.connect(lp).connect(g).connect(c.destination); src.start(t); src.stop(t + 0.78);
+        const c = ac(), t = c.currentTime;
+        const master = c.createGain(); master.gain.value = 0.92; master.connect(c.destination);
+
+        // 1) 起爆脆响：高通白噪瞬态
+        const cs = c.createBufferSource(); cs.buffer = noiseBuffer(c, 0.06, 1.5);
+        const chp = c.createBiquadFilter(); chp.type = 'highpass'; chp.frequency.value = 2200;
+        const cg = c.createGain();
+        cg.gain.setValueAtTime(0.75, t); cg.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+        cs.connect(chp).connect(cg).connect(master); cs.start(t); cs.stop(t + 0.08);
+
+        // 2) 低频重击：正弦从 120Hz 猛掉到 32Hz
+        const o = c.createOscillator(); o.type = 'sine';
+        o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(32, t + 0.35);
+        const og = c.createGain();
+        og.gain.setValueAtTime(0.0001, t);
+        og.gain.exponentialRampToValueAtTime(1.0, t + 0.012);
+        og.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+        o.connect(og).connect(master); o.start(t); o.stop(t + 0.55);
+
+        // 3) 爆轰轰鸣：低通扫频白噪 + 软削波增加颗粒感
+        const bs = c.createBufferSource(); bs.buffer = noiseBuffer(c, 0.8, 1.4);
+        const blp = c.createBiquadFilter(); blp.type = 'lowpass'; blp.Q.value = 0.7;
+        blp.frequency.setValueAtTime(2000, t); blp.frequency.exponentialRampToValueAtTime(70, t + 0.6);
+        const shaper = c.createWaveShaper(); shaper.curve = boomGrit();
+        const bg = c.createGain();
+        bg.gain.setValueAtTime(0.9, t); bg.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+        bs.connect(blp).connect(shaper).connect(bg).connect(master); bs.start(t); bs.stop(t + 0.82);
+
+        // 4) 长尾隆隆：低通白噪的余震
+        const rs = c.createBufferSource(); rs.buffer = noiseBuffer(c, 1.4, 2);
+        const rlp = c.createBiquadFilter(); rlp.type = 'lowpass'; rlp.frequency.value = 130;
+        const rg = c.createGain();
+        rg.gain.setValueAtTime(0.0001, t);
+        rg.gain.exponentialRampToValueAtTime(0.5, t + 0.06);
+        rg.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
+        rs.connect(rlp).connect(rg).connect(master); rs.start(t); rs.stop(t + 1.42);
       } catch (e) {}
     }
     // 胜利横幅
