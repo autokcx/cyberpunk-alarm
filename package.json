@@ -1,11 +1,11 @@
 {
-  "name": "pomodoro",
-  "version": "1.0.0",
+  "name": "csgo-focus-timer",
+  "version": "1.1.0",
   "description": "Kevin's 1st Vibe Coding App",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "package": "electron-packager . 'CyberPunk 闹钟' --platform=darwin --arch=arm64 --out=dist --overwrite --app-bundle-id=com.kevin.cyberpunk-alarm"
+    "package": "electron-packager . 'CSGO Focus Timer' --platform=darwin --arch=arm64 --out=dist --overwrite --app-bundle-id=com.kevin.csgo-focus-timer"
   },
   "author": "Kevin",
   "license": "MIT",
