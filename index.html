@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>CSGO Focus Timer</title>
+  <title>CS Timer</title>
   <style>
     @font-face { font-family: 'Rajdhani'; src: url('fonts/Rajdhani-Medium.ttf') format('truetype'); font-weight: 500; }
     @font-face { font-family: 'Rajdhani'; src: url('fonts/Rajdhani-Bold.ttf') format('truetype'); font-weight: 700; }
@@ -400,6 +400,7 @@
       document.body.classList.toggle('mode-rest', !isWork);
       document.body.classList.toggle('danger', danger);
       document.body.classList.toggle('running', running);
+      modeBtns.forEach((b) => b.classList.toggle('active', b.dataset.mode === mode));
 
       startBtn.textContent = running
         ? '❚❚ 暂停 HOLD'
@@ -422,7 +423,7 @@
       if (running) return;
       running = true;
       timerId = setInterval(tick, 1000);
-      if (mode === 'work') { blip(680, 0.06); speak('The bomb has been planted.', 0.78); }
+      if (mode === 'work') { blip(680, 0.06); playClip('planted'); }
       else blip(760, 0.05);
       render();
     }
@@ -474,12 +475,12 @@
         body = `Terrorists Win! 休息 ${restMin} 分钟，放松一下。`;
         boom();
         winBanner('TERRORISTS WIN', 'var(--t)');
-        speak('Terrorists Win!', 0.85);
+        setTimeout(() => playClip('terrorists_win'), 900); // 爆炸声后再喊胜利
       } else {
         next = 'work';
         title = '☕ 休息结束';
         body = '回来啦 — 埋下下一颗 C4。';
-        alarm();
+        playClip('ct_win');
         winBanner('休息结束', 'var(--rest)');
       }
       if (window.pomodoro) window.pomodoro.notify(title, body);
@@ -489,6 +490,16 @@
     /* ---------- 声音引擎 ---------- */
     let actx = null;
     function ac() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); return actx; }
+
+    // 播放真实 CS 原声（sounds/NAME.mp3）
+    function playClip(name, volume = 1) {
+      try {
+        const a = new Audio('sounds/' + name + '.mp3');
+        a.volume = volume;
+        const p = a.play();
+        if (p && p.catch) p.catch(() => {});
+      } catch (e) {}
+    }
 
     function blip(freq, dur, type = 'square') {
       try {
@@ -502,72 +513,18 @@
         o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + 0.02);
       } catch (e) {}
     }
-    // 休息结束提示（三声上扬）
-    function alarm() { [720, 900, 1080].forEach((f, i) => setTimeout(() => blip(f, 0.16, 'sawtooth'), i * 180)); }
     // C4 倒计时嘀声（最后 3 秒双响）
     function c4beep(sec) {
       blip(1500, 0.05, 'square');
       if (sec <= 3) setTimeout(() => blip(1500, 0.05, 'square'), 210);
     }
-    // 爆炸：低频轰鸣 + 白光 + 震屏
+    // 爆炸：真实 C4 爆炸声 + 白光火球 + 震屏
     function boom() {
       const flash = document.getElementById('flash');
       flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
       document.body.classList.add('boom');
       setTimeout(() => document.body.classList.remove('boom'), 620);
-      boomSound();
-    }
-    // 起爆音（多层合成，仿 CSGO C4）：起爆脆响 → 低频重击 → 爆轰轰鸣 → 长尾隆隆
-    function noiseBuffer(c, dur, shape) {
-      const len = Math.floor(c.sampleRate * dur);
-      const buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, shape);
-      return buf;
-    }
-    function boomGrit() {
-      const n = 1024, curve = new Float32Array(n);
-      for (let i = 0; i < n; i++) { const x = (i / n) * 2 - 1; curve[i] = Math.tanh(x * 2.4); }
-      return curve;
-    }
-    function boomSound() {
-      try {
-        const c = ac(), t = c.currentTime;
-        const master = c.createGain(); master.gain.value = 0.92; master.connect(c.destination);
-
-        // 1) 起爆脆响：高通白噪瞬态
-        const cs = c.createBufferSource(); cs.buffer = noiseBuffer(c, 0.06, 1.5);
-        const chp = c.createBiquadFilter(); chp.type = 'highpass'; chp.frequency.value = 2200;
-        const cg = c.createGain();
-        cg.gain.setValueAtTime(0.75, t); cg.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
-        cs.connect(chp).connect(cg).connect(master); cs.start(t); cs.stop(t + 0.08);
-
-        // 2) 低频重击：正弦从 120Hz 猛掉到 32Hz
-        const o = c.createOscillator(); o.type = 'sine';
-        o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(32, t + 0.35);
-        const og = c.createGain();
-        og.gain.setValueAtTime(0.0001, t);
-        og.gain.exponentialRampToValueAtTime(1.0, t + 0.012);
-        og.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-        o.connect(og).connect(master); o.start(t); o.stop(t + 0.55);
-
-        // 3) 爆轰轰鸣：低通扫频白噪 + 软削波增加颗粒感
-        const bs = c.createBufferSource(); bs.buffer = noiseBuffer(c, 0.8, 1.4);
-        const blp = c.createBiquadFilter(); blp.type = 'lowpass'; blp.Q.value = 0.7;
-        blp.frequency.setValueAtTime(2000, t); blp.frequency.exponentialRampToValueAtTime(70, t + 0.6);
-        const shaper = c.createWaveShaper(); shaper.curve = boomGrit();
-        const bg = c.createGain();
-        bg.gain.setValueAtTime(0.9, t); bg.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
-        bs.connect(blp).connect(shaper).connect(bg).connect(master); bs.start(t); bs.stop(t + 0.82);
-
-        // 4) 长尾隆隆：低通白噪的余震
-        const rs = c.createBufferSource(); rs.buffer = noiseBuffer(c, 1.4, 2);
-        const rlp = c.createBiquadFilter(); rlp.type = 'lowpass'; rlp.frequency.value = 130;
-        const rg = c.createGain();
-        rg.gain.setValueAtTime(0.0001, t);
-        rg.gain.exponentialRampToValueAtTime(0.5, t + 0.06);
-        rg.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
-        rs.connect(rlp).connect(rg).connect(master); rs.start(t); rs.stop(t + 1.42);
-      } catch (e) {}
+      playClip('explosion');
     }
     // 胜利横幅
     function winBanner(text, color) {
@@ -578,17 +535,6 @@
       txt.style.textShadow = `0 0 26px ${color}, 0 3px 10px rgba(0,0,0,0.7)`;
       banner.classList.remove('go'); void banner.offsetWidth; banner.classList.add('go');
     }
-    // 语音（英文台词，慢一点更清楚）
-    function speak(text, rate = 0.9) {
-      try {
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = 'en-US'; u.rate = rate; u.pitch = 0.85; u.volume = 1;
-        const v = speechSynthesis.getVoices().find((x) => /en(-|_)?US/i.test(x.lang));
-        if (v) u.voice = v;
-        speechSynthesis.cancel(); speechSynthesis.speak(u);
-      } catch (e) {}
-    }
-
     // 顶部小时钟（真实时间）
     function tickWall() {
       const d = new Date();
@@ -604,7 +550,6 @@
     document.addEventListener('keydown', (e) => {
       if (e.code === 'Space') { e.preventDefault(); toggle(); }
     });
-    if ('speechSynthesis' in window) speechSynthesis.getVoices();
 
     setDuration('work', focusMin, workBtns);
     setDuration('rest', restMin, restBtns);

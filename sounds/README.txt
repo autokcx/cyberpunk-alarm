@@ -1,11 +1,10 @@
-把真实的 CS:GO 音频放这里，App 会自动优先播放（覆盖内置语音台词）。
+真实 CS:GO 音效放这里，App 通过 HTML5 Audio 直接播放。
 
-按钮 → 文件名（放 .mp3）：
-  启动         → start.mp3
-  暂停         → pause.mp3
-  重置         → reset.mp3
-  番茄完成     → workDone.mp3
-  休息结束     → breakDone.mp3
+触发时机 → 文件名：
+  埋雷/开始专注   → planted.mp3          ("The bomb has been planted.")
+  专注完成起爆     → explosion.mp3        (真实 C4 爆炸声)
+  专注完成胜利喊话 → terrorists_win.mp3   ("Terrorists Win!")
+  休息结束         → ct_win.mp3           ("Counter-Terrorists Win")
 
-没有对应文件时，App 会用系统语音念经典英文台词（如 "Rush B!"、"The bomb has been planted."）。
-放好文件后重新运行 `npm run package` 重新打包即可。
+换成你自己的音频只要保持同名覆盖即可，然后重新 `npm run package` 打包。
+（UI 提示音——启动/暂停/重置/切换/选时长——是 Web Audio 实时合成的，不走文件。）

@@ -6,7 +6,7 @@ function createWindow() {
     width: 380,
     height: 560,
     resizable: false,
-    title: 'CSGO Focus Timer',
+    title: 'CS Timer',
     titleBarStyle: 'hidden',
     trafficLightPosition: { x: 14, y: 14 },
     backgroundColor: '#05070f',
